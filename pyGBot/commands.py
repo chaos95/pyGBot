@@ -32,10 +32,13 @@ class Command:
 
 
 #decorator
-def bot_command(fn, authlevel):
-    command = Command(fn, authlevel)
-    commands[fn.__name__] = command
-    return fn
+def bot_command(authlevel):
+    def inner(fn):
+        command = Command(fn, authlevel)
+	commands[fn.__name__] = command
+	log.logger.info('Adding command %s' % command)
+        return fn
+    return inner
 
 
 def add_alias(friendlyname, commandname):
@@ -69,11 +72,11 @@ def process_message(bot, channel, user, message):
 
     userlevel = get_userlevel(user)
 
-    if userlevel < command.level:
+    if userlevel < command.authlevel:
         errormsg = 'Insufficient access level for command: %s ' \
             'Required level: %s Your level: %s' % \
-            (origcommandname, str(command.level), str(userlevel))
+            (origcommandname, str(command.authlevel), str(userlevel))
         bot.noteout(user, errormsg)
         return
 
-    command(bot, channel, user, arg)
+    command.fn(bot, channel, user, arg)

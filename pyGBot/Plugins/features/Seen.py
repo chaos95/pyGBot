@@ -38,6 +38,21 @@ class SeenEvent(Entity):
 setup_all()
 create_all()
 
+
+def get_latest(username, channel=None):
+    if channel is None:
+        try:
+            return SeenEvent.query.filter_by(user=unicode(username)).order_by("timestamp DESC")[0]
+        except IndexError:
+            raise IndexError("I'm sorry, I haven't seen that user.")
+    else:
+        try:
+            return SeenEvent.query.filter_by(user=unicode(username), channel=unicode(channel)).order_by("timestamp DESC")[0]
+        except IndexError:
+            raise IndexError("I'm sorry, I haven't seen that user on that channel.")
+
+
+
 ###############################################################################
 ##
 ## Command
@@ -48,7 +63,7 @@ from pyGBot.commands import bot_command
 
 
 @bot_command(AuthLevels.User)
-def SeenCommand(self, bot, channel, user, args):
+def SeenCommand(bot, channel, user, args):
     args = args.strip().split()
     if not args:
         bot.replyout(channel, user, 'Command usage: seen <user> [channel]')
@@ -61,7 +76,7 @@ def SeenCommand(self, bot, channel, user, args):
         searchChannel = None
 
     try:
-        event = bot.plugins['features.Seen'].get_latest(searchNick, searchChannel)
+        event = get_latest(searchNick, searchChannel)
     except IndexError, e:
         bot.replyout(channel, user, e)
         return
@@ -141,18 +156,6 @@ class Seen(BasePlugin):
         """
         self.active = False
         return True
-
-    def get_latest(self, username, channel=None):
-        if channel is None:
-            try:
-                return SeenEvent.query.filter_by(user=unicode(username)).order_by("timestamp DESC")[0]
-            except IndexError:
-                raise IndexError("I'm sorry, I haven't seen that user.")
-        else:
-            try:
-                return SeenEvent.query.filter_by(user=unicode(username), channel=unicode(channel)).order_by("timestamp DESC")[0]
-            except IndexError:
-                raise IndexError("I'm sorry, I haven't seen that user on that channel.")
 
     # Event handlers for other users
     def user_join(self, channel, username):
