@@ -16,18 +16,19 @@
 ##    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-import sys, string, random, time
-from pyGBot import log
+import string
+import random
 from pyGBot.BasePlugin import BasePlugin
 
 # Import the card lists.
 from ApplesCards import GREENCARDS, REDCARDS
 
 # Note: When sending messages, codes such as "\x034" refer to IRC
-# colors, and "\x0F" cancels all formatting. In this game, 
+# colors, and "\x0F" cancels all formatting. In this game,
 # red cards are output red, and green cards are output green.
 # Player names are output in blue when deemed important (such as
 # when they are judging or just won a card)
+
 
 class ApplesToApples(BasePlugin):
     # Run on plugin initialization
@@ -38,7 +39,7 @@ class ApplesToApples(BasePlugin):
         self.output = True
         # Initialize variables
         self.resetdata()
-    
+
     # Run every second
     def timer_tick(self):
         # Timer only needs to happen while the game is running
@@ -61,10 +62,10 @@ class ApplesToApples(BasePlugin):
             self.do_command(channel, user, string.strip(a[1]))
         # "!" is also used as a bot trigger.
         # See if the message starts with a "!", and isn't only that char.
-        elif message[0]=='!' and (len(message) > 1):
+        elif message[0] == '!' and (len(message) > 1):
             # It does! Run the command.
             self.do_command(channel, user, string.strip(message[1:]))
-    
+
     # Run for every private message the bot sees
     def msg_private(self, user, message):
         # Pass the username as the channel to denote a private message
@@ -78,11 +79,11 @@ class ApplesToApples(BasePlugin):
         # ...if it is the user, it's a private message
         else:
             self.bot.noteout(user, text)
-    
+
     # Always reply privately
     def privreply(self, user, text):
         self.bot.noteout(user, text)
-        
+
     # Run when the bot sees a user change names
     def user_nickchange(self, old, new):
         # Replace the old nick with the new one in every variable that
@@ -94,7 +95,7 @@ class ApplesToApples(BasePlugin):
             if value[0] == old:
                 value[0] = new
         for map_ in (self.hands, self.woncards):
-            if map_.has_key(old):
+            if old in map_:
                 map_[new] = map_[old]
                 del map_[old]
 
@@ -102,30 +103,30 @@ class ApplesToApples(BasePlugin):
     def resetdata(self):
         # All self-instantiated variables.
         # References to data structure are not actual variable names!
-        
-        self.gamestate = "None" # Used to track if game is not in progress, in setup, or not running.
-        self.players = [] # Array of all players to participate
-        self.live_players = [] # Array of all players currently in the game
-        self.round_players = [] # Array of players that participated in a round
-        self.greendeck = GREENCARDS.keys() # Instance of the green cards
-        random.shuffle(self.greendeck) # Shuffle 'em up!
-        self.reddeck = REDCARDS.keys() # Instance of the red cards
-        random.shuffle(self.reddeck) # Shuffle 'em up!
-        self.judgeindex = 0 # Player array index for the current judge
-        self.hands={} # Dictionary of user:[hand]
-        self.greencard = None # Current green card
-        self.playedcards = [] # Array of [user], [card]
-        self.woncards = {} # Dictonary of user:[cards won]
-        self.cardstowin = 0 # How many cards a player must earn to win; based on starting user count
-        self.channel = None # IRC channel to run the game in
-        self.timer = 0 # Timer counter
-        self.judging = False # Judging phase flag
+
+        self.gamestate = "None"             # Used to track if game is not in progress, in setup, or not running.
+        self.players = []                   # Array of all players to participate
+        self.live_players = []              # Array of all players currently in the game
+        self.round_players = []             # Array of players that participated in a round
+        self.greendeck = GREENCARDS.keys()  # Instance of the green cards
+        random.shuffle(self.greendeck)      # Shuffle 'em up!
+        self.reddeck = REDCARDS.keys()      # Instance of the red cards
+        random.shuffle(self.reddeck)        # Shuffle 'em up!
+        self.judgeindex = 0                 # Player array index for the current judge
+        self.hands = {}                     # Dictionary of user:[hand]
+        self.greencard = None               # Current green card
+        self.playedcards = []               # Array of [user], [card]
+        self.woncards = {}                  # Dictonary of user:[cards won]
+        self.cardstowin = 0                 # How many cards a player must earn to win; based on starting user count
+        self.channel = None                 # IRC channel to run the game in
+        self.timer = 0                      # Timer counter
+        self.judging = False                # Judging phase flag
 
     # Set the game up
     def startgame(self):
         # The game started; change phase
         self.gamestate = "InProgress"
-        # Inform players 
+        # Inform players
         self.bot.pubout(self.channel, "A new game is starting! Please wait, dealing cards... (use !peek to see card descriptions)")
         # Add joined players to the player history
         self.players = list(self.live_players)
@@ -135,7 +136,7 @@ class ApplesToApples(BasePlugin):
         for user in self.live_players:
             self.woncards[user] = []
             self.hands[user] = []
-        # Now everyone gets seven cards to start with. Don't need the 
+        # Now everyone gets seven cards to start with. Don't need the
         # extra card text, and it takes too long to send seven messages per
         # player on most IRC servers.
         for i in range(1, 8):
@@ -145,8 +146,8 @@ class ApplesToApples(BasePlugin):
         for user in self.live_players:
             self.hands[user].sort()
             hand = []
-            for i in range (1, 8):
-                hand.append("%i: \x034%s\x0F" % (i, self.hands[user][i-1]))
+            for i in range(1, 8):
+                hand.append("%i: \x034%s\x0F" % (i, self.hands[user][i - 1]))
             self.privreply(user, "Your hand: %s" % ", ".join(hand))
         # Decide how many green cards are needed for victory
         if len(self.live_players) >= 8:
@@ -178,7 +179,7 @@ class ApplesToApples(BasePlugin):
                 self.cmd_greens([], user, user)
         # Clean the board
         self.resetdata()
-        
+
     # Start a new round
     def newround(self):
         # Reset the judge flag and timers
@@ -186,17 +187,17 @@ class ApplesToApples(BasePlugin):
         self.timer = 0
         # Display the score
         self.cmd_scores([], self.channel, self.bot.nickname)
-        
+
         # Reset the cards played
         self.playedcards = []
-        # Increment the judge index, unless it needs to wrap around, and 
+        # Increment the judge index, unless it needs to wrap around, and
         # tell the players who's judging
         if self.judgeindex == len(self.live_players) - 1:
             self.judgeindex = 0
         else:
             self.judgeindex = self.judgeindex + 1
         self.bot.pubout(self.channel, "This round's judge is \x02\x0312%s\x0F." % self.live_players[self.judgeindex])
-        
+
         # Select a new green card and tell the players what it is along
         # with a short syntax reminder
         self.greencard = self.greendeck.pop(0)
@@ -313,7 +314,7 @@ class ApplesToApples(BasePlugin):
             elif user == self.live_players[self.judgeindex]:
                 # Judge doesn't get to play.
                 self.reply(channel, user, "You are judging this round.")
-            elif self.judging == True:
+            elif self.judging:
                 # Everyone's played by now.
                 self.reply(channel, user, "Judging has already begun, wait for the next round.")
         else:
@@ -324,7 +325,7 @@ class ApplesToApples(BasePlugin):
     def cmd_pick(self, args, channel, user):
         if self.gamestate == "InProgress":
             # Are we judging? Is this the judge?
-            if self.judging == True and user == self.live_players[self.judgeindex]:
+            if self.judging and user == self.live_players[self.judgeindex]:
                 # Did they pick a valid number?
                 try:
                     if int(args[0]) > 0 and int(args[0]) <= len(self.playedcards):
@@ -349,7 +350,7 @@ class ApplesToApples(BasePlugin):
         else:
             # We're not even playing!
             self.reply(channel, user, "There is no game in progress.")
-    
+
     # User command: Read card text
     def cmd_peek(self, args, channel, user):
         if self.gamestate == "InProgress":
@@ -359,7 +360,7 @@ class ApplesToApples(BasePlugin):
                 try:
                     if int(args[0]) > 0 and int(args[0]) <= len(self.hands[user]):
                         # Privately tell them the card text
-                        self.privreply(user, "\x034%s\x0F - %s" % (self.hands[user][int(args[0])-1], REDCARDS[self.hands[user][int(args[0])-1]]))
+                        self.privreply(user, "\x034%s\x0F - %s" % (self.hands[user][int(args[0]) - 1], REDCARDS[self.hands[user][int(args[0]) - 1]]))
                     else:
                         # "What do you mean, card 11?"
                         self.reply(channel, user, "Please pick a valid card number.")
@@ -416,11 +417,11 @@ class ApplesToApples(BasePlugin):
                 self.bot.pubout(self.channel, "Green cards per players: %s. Cards to win: %i." % (", ".join(greenbuild), self.cardstowin))
             else:
                 self.bot.pubout(self.channel, "No scores yet. Cards to win: %i." % self.cardstowin)
-    
+
     # User command: Alias to cmd_stats
     def cmd_status(self, args, channel, user):
         self.cmd_stats(args, channel, user)
-    
+
     # User command: Check game score
     def cmd_scores(self, args, channel, user):
         # No game or in setup, no score
@@ -468,14 +469,14 @@ class ApplesToApples(BasePlugin):
                 else:
                     while len(self.hands[user]) < 7:
                         self.hands[user].append(self.reddeck.pop(0))
-                        self.privreply(user, "You draw: \x034%s\x0F: %s" % (self.hands[user][len(self.hands[user])-1], REDCARDS[self.hands[user][len(self.hands[user])-1]]))
+                        self.privreply(user, "You draw: \x034%s\x0F: %s" % (self.hands[user][len(self.hands[user]) - 1], REDCARDS[self.hands[user][len(self.hands[user]) - 1]]))
                 hand = []
-                for i in range (1, 8):
-                    hand.append("%i: \x034%s\x0F" % (i, self.hands[user][i-1]))
+                for i in range(1, 8):
+                    hand.append("%i: \x034%s\x0F" % (i, self.hands[user][i - 1]))
                 self.privreply(user, "Your hand: %s" % ", ".join(hand))
             else:
                 self.reply(channel, user, "You are already in the game.")
-    
+
     # User command: View hand
     def cmd_hand(self, args, channel, user):
         # Is the game in progress?
@@ -484,8 +485,8 @@ class ApplesToApples(BasePlugin):
             if user in self.live_players:
                 # Yep, here's their hand!
                 hand = []
-                for i in range (1, len(self.hands[user]) + 1):
-                    hand.append("%i: \x034%s\x0F" % (i, self.hands[user][i-1]))
+                for i in range(1, len(self.hands[user]) + 1):
+                    hand.append("%i: \x034%s\x0F" % (i, self.hands[user][i - 1]))
                 self.privreply(user, "Your hand: %s" % ", ".join(hand))
             else:
                 # Not a player, no hand.
@@ -493,7 +494,7 @@ class ApplesToApples(BasePlugin):
         else:
             # No game, no hands.
             self.reply(channel, user, "There is no game in progress.")
-    
+
     # User command: View cards won
     def cmd_greens(self, args, channel, user):
         # Is the game in progress?
@@ -503,8 +504,8 @@ class ApplesToApples(BasePlugin):
                 # Yep! Output the cards they've won
                 if len(self.woncards[user]) != 0:
                     hand = []
-                    for i in range (1, len(self.woncards[user]) + 1):
-                        hand.append("%i: \x02\x033%s\x0F" % (i, self.woncards[user][i-1]))
+                    for i in range(1, len(self.woncards[user]) + 1):
+                        hand.append("%i: \x02\x033%s\x0F" % (i, self.woncards[user][i - 1]))
                     self.privreply(user, "Your green cards: %s" % ", ".join(hand))
                 else:
                     # No won cards :(
@@ -515,7 +516,7 @@ class ApplesToApples(BasePlugin):
         else:
             # Not a game
             self.reply(channel, user, "There is no game in progress.")
-    
+
     # User command: Prompt inactive players
     def cmd_prompt(self, args, channel, user):
         # Is the game in progress?
@@ -538,7 +539,7 @@ class ApplesToApples(BasePlugin):
         else:
             # No game
             self.reply(channel, user, "There is no game in progress.")
-            
+
     # User command: Quit the game
     def cmd_quit(self, args, channel, user):
         # Game in progress, remove user and deal with aftermath
@@ -547,11 +548,11 @@ class ApplesToApples(BasePlugin):
             if user in self.live_players:
                 # Store current judge for later checks
                 judge = self.live_players[self.judgeindex]
-                
+
                 # Remove the player and inform other players
                 self.bot.pubout(self.channel, "%s has quit the game." % user)
                 self.live_players.remove(user)
-                
+
                 # 2 players is too little to keep going.
                 if len(self.live_players) < 3:
                     self.bot.pubout(self.channel, "There are now too few players to continue the game.")
@@ -567,11 +568,11 @@ class ApplesToApples(BasePlugin):
                         judge = self.live_players[self.judgeindex]
                         # Remove the new judge's card
                         for i in range(0, len(self.playedcards)):
-                            if self.playedcards[i-1][0] == judge:
-                                self.playedcards.remove(self.playedcards[i-1])
+                            if self.playedcards[i - 1][0] == judge:
+                                self.playedcards.remove(self.playedcards[i - 1])
                     else:
-                      # Find the old judge in the modified array
-                      self.judgeindex = self.live_players.index(judge)
+                        # Find the old judge in the modified array
+                        self.judgeindex = self.live_players.index(judge)
                 # Necessary if the player who quit was either the last
                 # who needed to play, or the judge (to restart judging)
                 self.checkroundover()
@@ -594,7 +595,7 @@ class ApplesToApples(BasePlugin):
         else:
             # No game, nothing to quit
             self.reply(channel, user, "There is no game in progress.")
-    
+
     # Moderator command: Delete a player
     def cmd_del(self, args, channel, user):
         # Create a handler for authorization
@@ -666,7 +667,7 @@ class ApplesToApples(BasePlugin):
         else:
             # Not authorized
             self.reply(channel, user, "You need to be at least a botmod to use that command.")
-    
+
     # Moderator command: End the game
     def cmd_end(self, args, channel, user):
         # Create a handler for authentication
@@ -684,7 +685,7 @@ class ApplesToApples(BasePlugin):
         else:
             # Not authorized
             self.reply(channel, user, "You need to be at least a botmod to use that command during a game.")
-    
+
     # User command: List commands.
     def cmd_help(self, args, channel, user):
         # Put all commands into an array
@@ -698,16 +699,17 @@ class ApplesToApples(BasePlugin):
         self.reply(channel, user, "Apples to Apples is a very simple, yet surprisingly fun, party game. Playing is easy! Just say !join to join a game, or !start to begin one if there are none starting. Every player gets 7 cards, replenished at the start of each round. A green card is also selected at the start of each round.")
         self.reply(channel, user, "If you are not judging, use !play [number from your hand] to play a card, preferably related to the green card. If you are judging, wait for everyone to play. You can use !prompt to see who has not yet played a card. If you forget your hand, use !hand to see it again. If you want to read a card, use !peek [number from your hand]. To see the green cards you have one, say !greens.")
         self.reply(channel, user, "After all players have put down a card, the Judge gets to choose the winner, with !pick [number]. There is no set criteria to determine the 'best' card. The judge simpy picks the card they like the most! It could be the one that fits the green card best, or the one they find the funniest. It's up to the judge! Players can only learn what the judges like, and use that to their advantage.")
-    
+
     # Run a user command on correct input
     def do_command(self, channel, user, cmd):
         # No command, nothing to do
-        if cmd=='': return
-        
+        if cmd == '':
+            return
+
         # Split the input into [command, arguments] and make lowercase
         cmds = cmd.strip().split(" ")
-        cmds[0]=cmds[0].lower()
-        
+        cmds[0] = cmds[0].lower()
+
         # Does this command exist?
         try:
             # Search for the command function and make a handler
