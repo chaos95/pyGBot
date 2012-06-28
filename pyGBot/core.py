@@ -277,15 +277,6 @@ class GBot(irc.IRCClient):
             if 'number' in conf['version']:
                 self.versionNum = conf['version']['number']
 
-        self.commandprefix = '^'
-        if 'Commands' in conf:
-            if '_prefix' in conf['Commands']:
-                self.commandprefix = conf['Commands']['_prefix']
-            for friendlyname, commandname in conf['Commands'].iteritems:
-                if not friendlyname.startswith('_'):
-                    log.logger.info('Setting alias %s for command %s' % (friendlyname, commandname))
-                    add_alias(friendlyname, commandname)
-
         self.whois = []
 
         self.channelusers = {}
@@ -301,6 +292,15 @@ class GBot(irc.IRCClient):
 
         log.logger.info("Activating startup plugins...")
         self.activatePlugin('system.Startup')
+
+        self.commandprefix = '^'
+        if 'Commands' in conf:
+            if '_prefix' in conf['Commands']:
+                self.commandprefix = conf['Commands']['_prefix']
+            for friendlyname, commandname in conf['Commands'].iteritems():
+                if not friendlyname.startswith('_'):
+                    log.logger.info('Setting alias %s for command %s' % (friendlyname, commandname))
+                    add_alias(friendlyname, commandname)
 
         self.timertask = task.LoopingCall(self.events.timer_tick)
 
