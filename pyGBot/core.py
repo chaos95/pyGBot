@@ -19,7 +19,7 @@
 # pyGBot imports
 from contrib.configobj import ConfigObj, ConfigObjError
 from pyGBot import log, format
-from pyGBot.commands import add_alias
+from pyGBot.commands import add_alias, load_commandspecs
 from pyGBot.PluginEvents import PluginEvents
 
 # Twisted imports
@@ -292,6 +292,8 @@ class GBot(irc.IRCClient):
 
         log.logger.info("Activating startup plugins...")
         self.activatePlugin('system.Startup')
+
+        load_commandspecs('pyGBot/CommandSpec')
 
         self.commandprefix = '^'
         if 'Commands' in conf:

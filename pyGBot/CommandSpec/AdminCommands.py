@@ -19,6 +19,9 @@ from pyGBot.commands import bot_command
 from pyGBot.auth import AuthLevels
 
 
+log.logger.info("**** LOADING ADMIN COMMANDS ****")
+
+
 @bot_command(AuthLevels.Admin)
 def ChangeNick(bot, channel, user, args):
     if args == '':

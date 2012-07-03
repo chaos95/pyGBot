@@ -16,6 +16,10 @@
 ##    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
+import os
+import pkgutil
+import string
+
 from pyGBot import log
 
 from pyGBot.auth import get_userlevel
@@ -36,7 +40,7 @@ def bot_command(authlevel):
     def inner(fn):
         command = Command(fn, authlevel)
 	commands[fn.__name__] = command
-	log.logger.info('Adding command %s' % command)
+	log.logger.info('Adding command %s' % command.fn.__name__)
         return fn
     return inner
 
@@ -48,6 +52,15 @@ def add_alias(friendlyname, commandname):
             (friendlyname, commandname))
 
     aliases[friendlyname] = commandname
+
+
+def load_commandspecs(path):
+    log.logger.info('CommandSpec: Preparing to load modules')
+    mods = list(pkgutil.iter_modules([path]))
+    pkg_path = string.replace(path, os.path.sep, '.')
+    for imp, modname, _ in mods:
+        log.logger.info('CommandSpec: Loading module %s' % modname)
+        mod = imp.find_module(modname).load_module(modname)
 
 
 # MESSAGE PROCESSING
