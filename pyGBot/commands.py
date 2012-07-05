@@ -39,19 +39,20 @@ class Command:
 def bot_command(authlevel):
     def inner(fn):
         command = Command(fn, authlevel)
-	commands[fn.__name__] = command
+	commands[fn.__name__.lower()] = command
 	log.logger.info('Adding command %s' % command.fn.__name__)
         return fn
     return inner
 
 
 def add_alias(friendlyname, commandname):
+    commandname = commandname.lower()
     if not commandname in commands:
         log.logger.warn(
             'Unable to add alias %s for command %s - command not found' %
             (friendlyname, commandname))
 
-    aliases[friendlyname] = commandname
+    aliases[friendlyname.lower()] = commandname
 
 
 def load_commandspecs(path):
@@ -66,7 +67,7 @@ def load_commandspecs(path):
 # MESSAGE PROCESSING
 def process_message(bot, channel, user, message):
     elems = message.split(' ', 1)
-    commandname = elems[0]
+    commandname = elems[0].lower()
     origcommandname = commandname
     if len(elems) > 1:
         arg = elems[1]
