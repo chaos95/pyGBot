@@ -39,8 +39,8 @@ class Command:
 def bot_command(authlevel):
     def inner(fn):
         command = Command(fn, authlevel)
-	commands[fn.__name__.lower()] = command
-	log.logger.info('Adding command %s' % command.fn.__name__)
+        commands[fn.__name__.lower()] = command
+        log.logger.info('Adding command %s' % command.fn.__name__)
         return fn
     return inner
 

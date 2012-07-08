@@ -19,7 +19,7 @@ from pyGBot.commands import bot_command
 from pyGBot.auth import AuthLevels
 
 
-log.logger.info("**** LOADING ADMIN COMMANDS ****")
+log.logger.debug("**** LOADING ADMIN COMMANDS ****")
 
 
 @bot_command(AuthLevels.Admin)
