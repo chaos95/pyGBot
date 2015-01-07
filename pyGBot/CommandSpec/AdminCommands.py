@@ -114,11 +114,11 @@ def UserMode(self, bot, channel, user, args):
     bot.modestring(bot.nickname, args)
 
 @bot_command(AuthLevels.Admin)
-def Quit(self, bot, channel, user, args):
-    log.logger.info("Shutdown requested")
+def Quit(bot, channel, user, args):
+    log.logger.info("Shutdown requested by %s" % user)
     bot.shutdown()
 
 @bot_command(AuthLevels.Admin)
-def Restart(self, bot, channel, user, args):
-    log.logger.info("Restart requested")
+def Restart(bot, channel, user, args):
+    log.logger.info("Restart requested by %s" % user)
     bot.restart()
