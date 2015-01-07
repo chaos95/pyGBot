@@ -78,7 +78,7 @@ def SeenCommand(bot, channel, user, args):
     try:
         event = get_latest(searchNick, searchChannel)
     except IndexError, e:
-        bot.replyout(channel, user, e)
+        bot.replyout(channel, user, str(e))
         return
 
     outmessage = "The user, %s, was last seen " % event.user

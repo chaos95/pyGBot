@@ -132,6 +132,10 @@ class GBot(irc.IRCClient):
 
         log.chatlog.info('[MODE] %s %s' % (target, modestring))
 
+    def changenick(self, newnick):
+        newnickOut = format.encodeOut(newnick)
+        self.setNick(newnickOut)
+
     def cprivmsg(self, channel, user, msg):
         """ Send a CPRIVMSG. This allows channel ops to bypass server flood
         limits when messaging users in their channel. """
@@ -226,6 +230,21 @@ class GBot(irc.IRCClient):
             self.activeplugins.remove(pluginname)
             return True
 
+    def restart(self):
+        log.logger.info("Stopping pyGBot...")
+        log.logger.debug("Unloading all plugins...")
+        for plugin in self.activeplugins:
+            self.deactivatePlugin(plugin)
+        log.logger.debug("Disconnecting...")
+        GBotFactory.connector.disconnect()
+        log.logger.debug("Shutting down reactor...")
+        log.logger.info("pyGBot stopped.")
+        # Automatic reconnect takes it from here
+
+    def shutdown(self):
+        self.stopbot = True # Tell the connection loss hooks to stop the reactor
+        self.restart() # Actually just performs shutdown procedures
+
     def __init__(self):
         """ Initialise GBot: load IRC connection info from the configuration,
         load plugins from the configuration, activate startup plugins, and
@@ -308,6 +327,8 @@ class GBot(irc.IRCClient):
 
         self.versionEnv = sys.platform
 
+        self.stopbot = False
+
     ############################################################################
     # Connection Callbacks
     ############################################################################
@@ -324,17 +345,20 @@ class GBot(irc.IRCClient):
 
     def connectionLost(self, reason):
         """ Called when a connection is shut down. """
-        irc.IRCClient.connectionLost(self, reason)
+        if self.stopbot:
+            reactor.stop()
+        else:
+            irc.IRCClient.connectionLost(self, reason)
 
-        log.logger.info("[disconnected at %s:%s]" %\
-              (time.asctime(time.localtime(time.time())), reason))
+            log.logger.info("[disconnected at %s:%s]" %\
+                  (time.asctime(time.localtime(time.time())), reason))
 
-        self.timertask.stop()
+            self.timertask.stop()
 
-        time.sleep(2)
+            time.sleep(2)
 
-        # Call Event Handler
-        self.events.bot_disconnect()
+            # Call Event Handler
+            self.events.bot_disconnect()
 
     ############################################################################
     # Event Callbacks
@@ -510,6 +534,7 @@ class GBotFactory(protocol.ClientFactory):
     def __init__(self, channels, filename):
         self.channels = channels
         self.filename = filename
+        self.connector = None
         conf = ConfigObj('pyGBot.ini')
 
         # Open GBot log
@@ -550,9 +575,10 @@ class GBotFactory(protocol.ClientFactory):
     def clientConnectionLost(self, connector, reason):
         """ Called when a client's connection is shut down. Attempts to
         reconnect to the server. """
-        log.logger.error('connection lost: %s', (str(reason),))
-        time.sleep(5)
-        connector.connect()
+        if str(reason).find("closed cleanly") == -1:
+            log.logger.error('connection lost: %s', (str(reason),))
+            time.sleep(5)
+            connector.connect()
 
     def clientConnectionFailed(self, connector, reason):
         """ Called when a client's connection fails. Log the error and exit. """
@@ -608,15 +634,14 @@ def run():
         # connect factory to this host and port, with SSL if enabled
         if sslconnect:
             if localaddr and localport:
-                reactor.connectSSL(host, port, fact, cfact, bindAddress=(localaddr, localport))
+                GBotFactory.connector = reactor.connectSSL(host, port, fact, cfact, bindAddress=(localaddr, localport))
             else:
-                reactor.connectSSL(host, port, fact, cfact)
+                GBotFactory.connector = reactor.connectSSL(host, port, fact, cfact)
         else:
             if localaddr and localport:
-                reactor.connectTCP(host, port, fact, bindAddress=(localaddr, localport))
+                GBotFactory.connector = reactor.connectTCP(host, port, fact, bindAddress=(localaddr, localport))
             else:
-                reactor.connectTCP(host, port, fact)
-
+                GBotFactory.connector = reactor.connectTCP(host, port, fact)
         # run bot
         reactor.run()
     except:

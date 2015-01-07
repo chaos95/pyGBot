@@ -28,7 +28,7 @@ def ChangeNick(bot, channel, user, args):
         bot.noteout(user, 'Please specify a new nick.')
 
     args = args.split(' ', 1)
-    bot.setNick(args[0])
+    bot.changenick(args[0])
 
 
 @bot_command(AuthLevels.Admin)
@@ -69,9 +69,12 @@ def JoinChannel(bot, channel, user, args):
 def Msg(bot, channel, user, args):
     if args == '':
         bot.noteout(user, 'Please specify a username to send a message to.')
-
-    args = args.split(' ', 1)
-    bot.privout(args[0], args[1])
+    else:
+        args = args.split(' ',1)
+        if len(args) > 1:
+            bot.privout(args[0],args[1])
+        else:
+            bot.noteout(user, 'Please include a message to send.')
 
 
 @bot_command(AuthLevels.Admin)
@@ -92,18 +95,16 @@ def PartChannel(bot, channel, user, args):
 
 @bot_command(AuthLevels.Admin)
 def Say(bot, channel, user, args):
-    if args == '':
+    args = args.split(' ',1)
+    if args == ['']:
         bot.noteout(user, 'Please specify a channel to speak in.')
-
-    args = args.split(' ', 1)
-    if args[0].startswith('#'):
+    elif args[0].startswith('#'):
         if args[0] in bot.channels:
-            bot.pubout(args[0], args[1])
+            bot.pubout(args[0],args[1])
         else:
             bot.noteout(user, 'I am not connected to that channel.')
     else:
         bot.noteout(user, 'Incorrect channel name. Channels must start with #')
-
 
 @bot_command(AuthLevels.Admin)
 def UserMode(self, bot, channel, user, args):
