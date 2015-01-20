@@ -20,22 +20,22 @@
 #      Also, ability to challenge draw-fours, possibly with !challenge
 import random
 
-from pyGBot import log
 from pyGBot.BasePlugin import BasePlugin
+
 
 class Uno(BasePlugin):
     colours = ['B', 'G', 'R', 'Y']
-    numbers = ['0','1','2','3','4','5','6','7','8','9']
-    specials = ['SK','D2','RV']
+    numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+    specials = ['SK', 'D2', 'RV']
     wilds = ['WLD', 'WD4']
-    
+
     aliases = {'WLD': ['WILD'], 'WD4': ['WILD4', 'DRAW4', 'WLD4']}
-    
+
     colournames = {'B': 'Blue', 'G': 'Green', 'R': 'Red', 'Y': 'Yellow'}
     colourcodes = {'B': '12', 'G': '3', 'R': '4', 'Y': '8'}
 
     handsize = 7
-    maxplayers = 10 #108 / (handsize + 1)
+    maxplayers = 10  # originally 108 / (handsize + 1)
 
     def __init__(self, bot, options):
         BasePlugin.__init__(self, bot, options)
@@ -87,7 +87,7 @@ class Uno(BasePlugin):
 
     def user_quit(self, user, reason=""):
         if user in self.players:
-            self.player_leave(self.channel, user)        
+            self.player_leave(self.channel, user)
 
     def msg_channel(self, channel, user, message):
         if message.startswith('!') and channel == self.channel:
@@ -109,7 +109,7 @@ class Uno(BasePlugin):
             self.pubout('%s: %s' % (user, msg))
 
     def process_cmd(self, channel, user, cmd):
-        args = cmd.lower().split(' ',1)
+        args = cmd.lower().split(' ', 1)
         cmdname = args[0]
         if len(args) > 1:
             args = args[1]
@@ -148,16 +148,16 @@ class Uno(BasePlugin):
     def cmd_order(self, channel, user, args):
         if not self.game_running:
             return
-        
+
         outlist = []
         outlist.append(self.current_player)
-        
+
         p = self.get_next_player()
-        
+
         while p != self.current_player:
             outlist.append(p)
             p = self.get_next_player(p)
-        
+
         self.pubout('Order of turns: %s' % ', '.join(outlist))
 
     def cmd_draw(self, channel, user, args):
@@ -178,13 +178,13 @@ class Uno(BasePlugin):
 
         if self.draw2total > 0:
             draw = self.draw2total
-        elif self.draw4 == True:
+        elif self.draw4:
             draw = 4
         else:
             draw = 1
 
         drawcards = []
-        for i in range(0,draw):
+        for i in range(0, draw):
             if len(self.deck) <= 1:
                 self.reshuffle_discards()
 
@@ -199,7 +199,7 @@ class Uno(BasePlugin):
             self.waitdraw = True
             self.drawcard = drawcards[0]
             return
-        
+
         if self.draw4 == True:
             self.draw4 = False
 
@@ -224,7 +224,7 @@ class Uno(BasePlugin):
         args = args.split()
 
         card_to_play = None
-        
+
         # bit of a special case if we're stacking Draw 2's
         if self.draw2total > 0:
             if len(args) >= 1 and self.card_normalise(args[0]).endswith('D2'):
@@ -233,9 +233,9 @@ class Uno(BasePlugin):
                 for card in self.playerhands[self.current_player]:
                     if card.endswith('D2'):
                         card_to_play = card
-            self.bot.noteout(user,'You do not have any draw two cards. You must accept the draw with !draw.')
+            self.bot.noteout(user, 'You do not have any draw two cards. You must accept the draw with !draw.')
         elif self.draw4 == True:
-            self.bot.noteout(user,'You must draw four cards.')
+            self.bot.noteout(user, 'You must draw four cards.')
             card_to_play = None
         elif self.waitdraw == True:
             card_to_play = self.drawcard
@@ -245,7 +245,7 @@ class Uno(BasePlugin):
         if card_to_play != None and card_to_play != "":
             if self.play_card(channel, user, card_to_play):
                 self.first_turn = False
-                self.waitdraw = False                
+                self.waitdraw = False
                 if self.wild and len(args) >= 2:
                     self.set_wild(args[1])
 
@@ -254,13 +254,12 @@ class Uno(BasePlugin):
                     self.next_player(channel)
 
         if self.wild:
-            self.bot.noteout(self.current_player,'You must select a colour with the !wild command.')
-
+            self.bot.noteout(self.current_player, 'You must select a colour with the !wild command.')
 
     def cmd_pass(self, channel, user, args):
         if user not in self.players:
             return
-        
+
         if self.game_running:
             if user == self.current_player and self.waitdraw:
                 self.waitdraw = False
@@ -270,7 +269,7 @@ class Uno(BasePlugin):
 
     def cmd_challenge(self, channel, user, args):
         pass
-                             
+
     def cmd_wild(self, channel, user, args):
         if not self.game_running:
             return
@@ -280,7 +279,7 @@ class Uno(BasePlugin):
 
         if user != self.current_player:
             return
-            
+
         args = args.split(' ')
 
         if self.wild == True:
@@ -289,7 +288,7 @@ class Uno(BasePlugin):
         if not self.first_turn:
             self.show_discard(channel)
             self.next_player(channel)
-            
+
     def set_wild(self, arg):
         if arg[0].upper() in Uno.colours:
             self.pubout('Setting wild colour to %s' % Uno.colournames[arg[0].upper()])
@@ -300,7 +299,7 @@ class Uno(BasePlugin):
 
     def card_normalise(self, card):
         card = card.upper()
-        
+
         if len(card) <= 1:
             card = ""
         elif len(card) == 2:
@@ -314,8 +313,8 @@ class Uno(BasePlugin):
                 card = ""
 
         return card
-        
-    def get_next_player(self, player = None, direction = None):
+
+    def get_next_player(self, player=None, direction=None):
         if direction == None or direction < -1 or direction > 1:
             direction = self.direction
 

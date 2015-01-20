@@ -30,21 +30,22 @@ CR = chr(0x0D)
 NL = chr(0x0A)
 LF = NL
 CRLF = CR + LF
-SPC = chr(0x20) # space
+SPC = chr(0x20)  # space
 
 BOLD = chr(2)
 COLOR = chr(3)
 ITALIC = chr(0x16)
-REV = ITALIC # reversed colors - italic or reversed display is client-dependent
+REV = ITALIC  # reversed colors - italic or reversed display is client-dependent
 UNDER = chr(0x1f)
 CLEAR = chr(0x0f)
 
 # REGEXES
 # Colors - does NOT match the formatting clear byte 0x0f
-RE_COLOR  = re.compile(r'\x03(\d{1,2}(,\d{1,2})?)?')
+RE_COLOR = re.compile(r'\x03(\d{1,2}(,\d{1,2})?)?')
 
 # Formatting except color (matches the clear byte 0x0f)
 RE_FORMAT = re.compile('|'.join([BOLD, COLOR, ITALIC, UNDER, CLEAR]))
+
 
 def strip(msg):
     """ Strips all IRC formatting from a string. """
@@ -53,26 +54,28 @@ def strip(msg):
     stripmsg = RE_COLOR.sub('', stripmsg)
     return stripmsg
 
+
 def stripcolors(msg):
     """ Strip IRC color codes from a string. """
     return RE_COLOR.sub('', msg)
 
+
 def color(fg=None, bg=None):
     """ Return an IRC color code string. If no arguments are given, returns the
     color-reset code.
-    
+
     Usage:
     color() - Return IRC color reset code (0x03).
     color(fg) - Return IRC color code for a foreground color.
     color(fg, bg) - Return IRC color code for a foreground and background color.
-    
+
     Parameters:
     * fg int Foreground color, 0-99 (usually colours = 0-15, transparent = 99).
       Invalid color values are ignored.
     * bg int Background color, 0-99 (usually colours = 0-15, transparent = 99).
       Invalid color values are ignored.
     """
-    
+
     fmtpieces = [COLOR, '{:0=2d}', ',{:0=2d}']
     if fg >= 0 and fg < 100:
         if bg != None and bg >= 0 and bg < 100:
@@ -83,6 +86,7 @@ def color(fg=None, bg=None):
         code = fmtpieces[0]
     return code
 
+
 def encodeOut(msg):
     """ Encode output text as a UTF-8 byte-string, replacing any invalid
     characters with '?'. If the msg argument is not a unicode string, return
@@ -92,6 +96,7 @@ def encodeOut(msg):
     else:
         encMsg = msg
     return encMsg
+
 
 def decodeIn(msg):
     """ Decode input text as UTF-8, replacing any invalid characters with '?',

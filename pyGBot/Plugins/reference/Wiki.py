@@ -702,3 +702,104 @@ class Wiki(BasePlugin):
                 "retrieving the content of '%s' <%s> (maybe malformed JSON?)",\
                 format.encodeOut(title), apiUrl)
             return None
+
+##############################################################################
+## Commands
+##############################################################################
+
+@bot_command(AuthLevels.User)
+def Wiki(bot, channel, user, args):
+    """ Wikipedia Lookup Command - Outputs the URL to the searched article, if
+    it exists, and an excerpt of the beginning of the article.
+
+    This command is a simple binding to the reference.Wiki plugin."""
+    """ Query the Wiki plugin for an article lookup and output the returned
+    text. """
+
+    # Get text to output
+    params = {
+        'query' : ''.join(args)
+    }
+    try:
+        wikiplugin = bot.plugins['reference.Wiki']
+    except KeyError:
+        return
+    else:
+        response = wikiplugin.command(channel, user, params)
+        bot.replyout(channel, user, response)
+
+
+# Mediawiki lookup custom commands - Outputs the URL to the searched
+# article, if it exists, and an excerpt of the beginning of the article.
+
+# This command is a simple binding to the reference.Wiki plugin.
+
+# You can use the code to this command as a template for making your own
+# custom MediaWiki lookup commands. This is useful if you want one bot to
+# have several commands that lookup different MediaWiki sites via
+# pyGBot.reference.Wiki.
+
+# To make a custom command for pyGBot.reference.Wiki, copy the
+# function below and rename it. Then, inside the function, change the values
+# wikiName, wikiUrl, wikiApi, and wikiBase for the MediaWiki site you
+# want. (See the plugin documentation for details about these settings).
+
+# Then, in your pyGBot.ini file, under [Plugins.system.Commands], add the
+# line:
+
+#     cmd = YourCustomCommandName
+
+# where YourCustomCommandName is the name of the function you changed
+# earlier, and cmd is the command IRC users will use for that command.
+
+# If you know Python, you can further customise the command by changing
+# the method further. However, this is not officially supported and at
+# your own discretion.
+
+
+
+@bot_command(AuthLevels.User)
+def Wiktionary(bot, channel, user, args):
+    """ Query the Wiki plugin for an article lookup and output the returned
+    text. """
+
+    # Get text to output
+    params = {
+        'query' : ''.join(args).lower(), # wiktionary uses lowercase
+        'name'  : "Wiktionary"
+        'url'   : "http://en.wiktionary.org"
+        'api'   : "/w/api.php"
+        'base'  : "/wiki"
+        'maxsize' : 0
+    }
+    try:
+        wikiplugin = bot.plugins['reference.Wiki']
+    except KeyError:
+        return
+    else:
+        response = wikiplugin.command(channel, user, params)
+        bot.replyout(channel, user, response)
+
+@bot_command(AuthLevels.User)
+def xkcdWiki(bot, channel, user, args):
+    """ Query the Wiki plugin for an article lookup and output the returned
+    text. """
+    
+    # Get text to output
+    params = {
+        'query' : ''.join(args).lower(), # wiktionary uses lowercase
+        'name'  : "XKCD Wiki"
+        'url'   : "http://wiki.xkcd.com"
+        'api'   : "/wirc/api.php"
+        'base'  : "/irc"
+        'maxsize' : -1
+    }
+    try: 
+        wikiplugin = bot.plugins['reference.Wiki']
+    except KeyError:
+        return
+    else:
+        response = wikiplugin.command(channel, user, params)
+        bot.replyout(channel, user, response)
+
+

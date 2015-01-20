@@ -19,24 +19,14 @@
 import hashlib
 
 from pyGBot import log
+from pyGBot.auth import AuthLevels, set_userlevel, get_userlevel, rename_user, delete_user
 from pyGBot.BasePlugin import BasePlugin
 from contrib.configobj import ConfigObj
 
-class AuthLevels:
-    User = 0
-    Mod = 100
-    Admin = 200
-
-class User:
-    def __init__(self, host, level = AuthLevels.User):
-        self.nick = host.split('!', 1)[0]
-        #self.host = host.split('!', 1)[1]
-        self.level = level
 
 class Auth(BasePlugin):
     def __init__(self, bot, options):
         BasePlugin.__init__(self, bot, options)
-        self.users = {}
         self.conf = ConfigObj("users.ini")
         try:
             if options["authtype"].lower() == "nickserv":
@@ -45,39 +35,20 @@ class Auth(BasePlugin):
                 self.authtype = "pygbot"
         except:
             self.authtype = "pygbot"
-    
-    def get_userlevel(self, user):
-        if self.users.has_key(user):
-            return self.users[user].level
-        else:
-            newuser = User(user)
-            self.users[user] = newuser
-            return newuser.level
-    
-    def set_userlevel(self, user, level):
-        if self.users.has_key(user):
-            self.users[user].level = level
-        else:
-            newuser = User(user)
-            newuser.level = level
-            self.users[user] = newuser
-    
+
     # Event handlers for other users
     def user_join(self, channel, username):
-        pass
+        if self.authtype == "nickserv":
+            self.start_nickserv_auth(username)
 
     def user_part(self, channel, username):
         pass
 
     def user_quit(self, user, reason=""):
-        if self.users.has_key(user):
-            del self.users[user]
+        delete_user(user)
 
     def user_nickchange(self, username, newname):
-        if self.users.has_key(username):
-            self.users[newname] = self.users[username]
-            del self.users[username]
-        pass
+        rename_user(username, newname)
 
     # Event handlers for this bot
     def bot_connect(self):
@@ -102,15 +73,14 @@ class Auth(BasePlugin):
     def msg_private(self, user, message):
         if message.lower().startswith('auth'):
             if self.authtype == "nickserv":
-                self.bot.privout("nickserv", "acc %s *" % user)
-                log.logger.info('Auth: Attempting to auth %s' % user)
+                self.start_nickserv_auth(user)
             if self.authtype == "pygbot":
-                if len(message.rsplit(' ',2)) == 3:
-                    cmd, uname, password = message.rsplit(' ',2)
+                if len(message.rsplit(' ', 2)) == 3:
+                    cmd, uname, password = message.rsplit(' ', 2)
                     if self.get_passhash(uname) == hashlib.sha1((password + u'pygb0t').encode('utf-8', 'replace')).hexdigest():
                         authlevel = self.get_authlevel(uname)
                         if authlevel != None:
-                            self.set_userlevel(user, self.get_authlevel(uname))
+                            set_userlevel(user, self.get_authlevel(uname))
                             self.bot.noteout(user, 'Successfully authed.')
                             log.logger.info('Auth: Authorized user %s at level %d.' % (user, authlevel))
                         else:
@@ -130,28 +100,34 @@ class Auth(BasePlugin):
                     if int(message.split(" ")[4]) == 3:
                         authlevel = self.get_authlevel(account)
                         if authlevel != None:
-                            self.set_userlevel(uname, self.get_authlevel(account))
+                            set_userlevel(uname, self.get_authlevel(account))
                             self.bot.noteout(uname, 'Successfully authorized via NickServ.')
                             log.logger.info('Auth: Authorized user %s to account %s at level %d through NickServ.' % (uname, account, authlevel))
                         else:
-                            self.set_userlevel(user, 50)
+                            set_userlevel(user, AuthLevels.User)
                             self.bot.noteout(uname, 'You do not have an account. Successfully authorized as a guest user.')
                             log.logger.info('Auth: Invalid user level for user %s. Set to default.' % uname)
                     else:
                         self.bot.noteout(uname, 'Authorization unsuccessful. Please log in to NickServ and try again.')
 
     def channel_names(self, channel, nameslist):
-        log.logger.info("Users on #" + channel + ": " + ', '.join(nameslist))
+        log.logger.info("Users on #" + channel + ": " + ', '.join(
+            "%s (%d)" % (name, get_userlevel(name)) for name in nameslist)
+        )
 
     def get_passhash(self, uname):
-        if self.conf.has_key(uname) and self.conf[uname].has_key('passhash'):
+        if uname in self.conf and 'passhash' in self.conf[uname]:
             return self.conf[uname]['passhash']
-    
+
     def get_authlevel(self, uname):
-        if self.conf.has_key(uname) and self.conf[uname].has_key('userlevel'):
+        if uname in self.conf and 'userlevel' in self.conf[uname]:
             if hasattr(AuthLevels, self.conf[uname]['userlevel']):
                 return getattr(AuthLevels, self.conf[uname]['userlevel'])
             else:
                 return None
         else:
             return None
+
+    def start_nickserv_auth(self, username):
+        self.bot.privout("nickserv", "acc %s *" % username)
+        log.logger.info('Auth: Attempting to auth %s' % username)

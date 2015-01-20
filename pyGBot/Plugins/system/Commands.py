@@ -16,42 +16,16 @@
 ##    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-from pyGBot import log
 from pyGBot.BasePlugin import BasePlugin
 
-from pyGBot.Plugins.system.Auth import AuthLevels as AL
+from pyGBot.commands import process_message
 
-class BaseCommand:
-    """Static base class for one-line commands.
-    Derive this class to create specific commands.
-    """
-    level = AL.User
-    def __init__(self, bot, channel, user, args):
-        pass
 
 class Commands(BasePlugin):
     __plugintype__ = "active"
 
     def __init__(self, bot, options):
         BasePlugin.__init__(self, bot, options)
-        if self.bot.plugins.has_key('system.Auth') == False:
-            raise StandardError("Unable to access auth plugin. " +\
-            "Please ensure it is loaded first.")
-
-        if options.has_key('_prefix'):
-            self.cmdprefix = options['_prefix']
-        else:
-            self.cmdprefix = '^'
-        self.commands = {}
-        
-        for friendlyname, commandname in options.iteritems():
-            if not friendlyname.startswith('_'):
-                log.logger.info("Importing command " + commandname + " with friendly name " + friendlyname)
-                command = __import__("pyGBot.Plugins.system.CommandSpec." + commandname, fromlist = [commandname])
-                self.commands[friendlyname] = getattr(command, commandname)
-            
-    def pubout(self, channel, message):
-        self.bot.pubout(channel, message)
 
     # Event handlers for other users
     def user_join(self, channel, username):
@@ -79,36 +53,17 @@ class Commands(BasePlugin):
     def bot_disconnect(self):
         pass
 
-
     # Event handlers for incoming messages
     def msg_channel(self, channel, user, message):
-        if message.startswith(self.cmdprefix):
-            self.processMessage(channel, user, message[len(self.cmdprefix):])
+        if message.startswith(self.bot.commandprefix):
+            process_message(self.bot, channel, user, message[len(self.bot.commandprefix):])
 
     def msg_action(self, channel, user, message):
         pass
 
     def msg_private(self, user, message):
-        if message.startswith(self.cmdprefix):
-            self.processMessage(None, user, message[len(self.cmdprefix):])
+        if message.startswith(self.bot.commandprefix):
+            process_message(self.bot, None, user, message[len(self.bot.commandprefix):])
 
     def msg_notice(self, user, message):
         pass
-
-    # MESSAGE PROCESSING
-    def processMessage(self, channel, user, message):
-        elems = message.split(' ', 1)
-        command = elems[0]
-        if len(elems) > 1:
-            arg = elems[1]
-        else:
-            arg = ""
-
-        get_userlevel = self.bot.plugins['system.Auth'].get_userlevel
-
-        if self.commands.has_key(command) == False:
-            self.bot.noteout(user, 'Command not recognised: %s' % command)
-        elif get_userlevel(user) < self.commands[command].level:
-            self.bot.noteout(user, 'Insufficient access level for command: ' + command + ' Required level: ' + str(self.commands[command].level) + ' Your level: ' + str(get_userlevel(user)))
-        else:
-            self.commands[command](self.bot, channel, user, arg)

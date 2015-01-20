@@ -19,6 +19,7 @@
 # pyGBot imports
 from contrib.configobj import ConfigObj, ConfigObjError
 from pyGBot import log, format
+from pyGBot.commands import add_alias, load_commandspecs
 from pyGBot.PluginEvents import PluginEvents
 
 # Twisted imports
@@ -38,13 +39,13 @@ from twisted.internet import reactor, protocol, task
 # Standard library imports
 import sys
 import time
-import threading
 import logging
 
 # Some useful IRC constants - for easy access from plugins
 CHANNEL_PREFIXES = '&#!+'
 # Max message length, as defined by RFC 2812 Section 2.3 (includes trailing CRLF)
 MAX_COMMAND_LENGTH = 512
+
 
 class GBot(irc.IRCClient):
     ''' No longer just an IRC Texas Holdem tournament dealer. '''
@@ -116,7 +117,7 @@ class GBot(irc.IRCClient):
         reasonOut = format.encodeOut(reason)
         irc.IRCClient.part(self, channelOut, reasonOut)
 
-    def actout(self,channel, msg):
+    def actout(self, channel, msg):
         """ Send an action (/me command) to a channel. """
         msgOut = format.encodeOut(msg)
         channelOut = format.encodeOut(channel)
@@ -146,18 +147,17 @@ class GBot(irc.IRCClient):
     def cnotice(self, channel, user, message):
         """ Send a CNOTICE. This allows channel ops to bypass server flood
         limits when sending a notice to users in their channel. """
-        msgOut = format.encodeOut(msg)
+        msgOut = format.encodeOut(message)
         userOut = format.encodeOut(user)
         channelOut = format.encodeOut(channel)
         self.sendLine("CNOTICE %s %s :%s" % (userOut, channelOut, msgOut,))
-
 
     ############################################################################
     # Plugin Handling Methods
     ############################################################################
     def loadPlugins(self, conf):
         """ (private) Load all registered plugins. """
-        if conf.has_key('Plugins') == False:
+        if 'Plugins' not in conf:
             return
 
         pluginnames = conf['Plugins'].keys()
@@ -171,7 +171,7 @@ class GBot(irc.IRCClient):
         """ (private) Load a plugin from its file and initialise it. """
         log.logger.info("Loading plugin %s", pluginname)
 
-        if conf.has_key('Plugins.' + pluginmodule + '.' + pluginname):
+        if ('Plugins.' + pluginmodule + '.' + pluginname) in conf:
             options = conf['Plugins.' + pluginmodule + '.' + pluginname]
         else:
             options = []
@@ -186,7 +186,7 @@ class GBot(irc.IRCClient):
 
     def activatePlugin(self, pluginname, channel=None):
         """ (private) Activate a loaded plugin. """
-        if self.plugins.has_key(pluginname) == False:
+        if pluginname not in self.plugins:
             log.logger.error('Unable to activate plugin %s: plugin not loaded.', pluginname)
             return
 
@@ -199,7 +199,7 @@ class GBot(irc.IRCClient):
 
         for eventname in self.events.__events__:
             log.logger.debug("Testing for event handler %s", eventname)
-            if hasattr(plugin, eventname) == True:
+            if hasattr(plugin, eventname):
                 log.logger.debug("Adding event handler %s from plugin %s.", eventname, pluginname)
                 event = getattr(self.events, eventname)
                 event += getattr(plugin, eventname)
@@ -209,7 +209,7 @@ class GBot(irc.IRCClient):
 
     def deactivatePlugin(self, pluginname, channel=None):
         """ (private) Deactivates a loaded plugin. """
-        if self.plugins.has_key(pluginname) == False:
+        if pluginname in self.plugins == False:
             log.logger.error('Unable to deactivate plugin ' + pluginname)
             return
 
@@ -218,7 +218,7 @@ class GBot(irc.IRCClient):
 
         for eventname in self.events.__events__:
             log.logger.debug("Testing for event handler " + eventname)
-            if hasattr(plugin, eventname) == True:
+            if hasattr(plugin, eventname):
                 log.logger.debug("Removing event handler " + eventname + " from plugin " + pluginname)
                 event = getattr(self.events, eventname)
                 event -= getattr(plugin, eventname)
@@ -259,41 +259,41 @@ class GBot(irc.IRCClient):
             print "Cannot open config file: ", msg
             sys.exit(1)
 
-        if conf.has_key('IRC') == False:
+        if 'IRC' not in conf:
             print "Config file does not contain IRC connection information."
             sys.exit(1)
 
-        if conf['IRC'].has_key('nick'):
+        if 'nick' in conf['IRC']:
             self.nickname = conf['IRC']['nick']
-        if conf['IRC'].has_key('idpass'):
+        if 'idpass' in conf['IRC']:
             self.idpass = conf['IRC']['idpass']
-        if conf['IRC'].has_key('idnick'):
+        if 'idnick' in conf['IRC']:
             self.idnick = conf['IRC']['idnick']
 
-        if conf['IRC'].has_key('realname'):
+        if 'realname' in conf['IRC']:
             self.realname = conf['IRC']['realname']
-        if conf['IRC'].has_key('usermodes'):
+        if 'usermodes' in conf['IRC']:
             self.usermodes = conf['IRC']['usermodes']
 
-        if conf['IRC'].has_key('opernick'):
+        if 'opernick' in conf['IRC']:
             self.opernick = conf['IRC']['opernick']
-        if conf['IRC'].has_key('operpass'):
+        if 'operpass' in conf['IRC']:
             self.operpass = conf['IRC']['operpass']
 
-        if conf['IRC'].has_key('ircpass'):
+        if 'ircpass' in conf['IRC']:
             self.password = conf['IRC']['ircpass']
-        if conf['IRC'].has_key('minusmodes'):
+        if 'minusmodes' in conf['IRC']:
             self.minusmodes = conf['IRC']['minusmodes']
-        if conf['IRC'].has_key('plusmodes'):
+        if 'plusmodes' in conf['IRC']:
             self.plusmodes = conf['IRC']['plusmodes']
 
-        if conf['IRC'].has_key('flooddelay'):
+        if 'flooddelay' in conf['IRC']:
             self.lineRate = float(conf['IRC']['flooddelay'])
 
-        if conf.has_key('version'):
-            if conf['version'].has_key('name'):
+        if 'version' in conf:
+            if 'name' in conf['version']:
                 self.versionName = conf['version']['name']
-            if conf['version'].has_key('number'):
+            if 'number' in conf['version']:
                 self.versionNum = conf['version']['number']
 
         self.whois = []
@@ -312,6 +312,17 @@ class GBot(irc.IRCClient):
         log.logger.info("Activating startup plugins...")
         self.activatePlugin('system.Startup')
 
+        load_commandspecs('pyGBot/CommandSpec')
+
+        self.commandprefix = '^'
+        if 'Commands' in conf:
+            if '_prefix' in conf['Commands']:
+                self.commandprefix = conf['Commands']['_prefix']
+            for friendlyname, commandname in conf['Commands'].iteritems():
+                if not friendlyname.startswith('_'):
+                    log.logger.info('Setting alias %s for command %s' % (friendlyname, commandname))
+                    add_alias(friendlyname, commandname)
+
         self.timertask = task.LoopingCall(self.events.timer_tick)
 
         self.versionEnv = sys.platform
@@ -327,7 +338,7 @@ class GBot(irc.IRCClient):
         log.logger.info("[connected at %s]" %\
                         time.asctime(time.localtime(time.time())))
 
-        self.timertask.start(1.0) # 1-second timer granularity
+        self.timertask.start(1.0)  # 1-second timer granularity
 
         # Call Event Handler
         self.events.bot_connect()
@@ -368,7 +379,6 @@ class GBot(irc.IRCClient):
         if hasattr(self, 'idnick') and hasattr(self, 'idpass'):
             self.privout('%s' % (self.idnick,), 'identify %s' % (self.idpass,))
 
-
     def joined(self, channel):
         """ Called when the bot joins a channel. """
         log.logger.info('[I have joined %s]' % (channel,))
@@ -403,7 +413,7 @@ class GBot(irc.IRCClient):
         """ Called when the bot receives a NOTICE. """
         user = user.split('!', 1)[0]
         userIn = format.decodeIn(user)
-        channelIn = format.decodeIn(channel)
+        #channelIn = format.decodeIn(channel)
         msgIn = format.decodeIn(msg)
         log.chatlog.info('[NTE<-]<%s> %s' % (user, msg))
 
@@ -511,6 +521,7 @@ class GBot(irc.IRCClient):
         # Call Event Handler
         self.events.user_nickchange(oldnameIn, newnameIn)
 
+
 class GBotFactory(protocol.ClientFactory):
     """A factory for tbots.
 
@@ -530,14 +541,14 @@ class GBotFactory(protocol.ClientFactory):
         try:
             print "Opening pyGBot log file..."
             log.addScreenHandler(log.logger, log.formatter)
-            log.addLogFileHandler(log.logger,conf['IRC']['logfile'], log.formatter)
+            log.addLogFileHandler(log.logger, conf['IRC']['logfile'], log.formatter)
         except IOError, msg:
             print "Unable to open log file: ", msg
             print "Defaulting to 'pyGBot.log'."
-            log.addLogFileHandler(log.logger,'pyGBot.log', log.formatter)
+            log.addLogFileHandler(log.logger, 'pyGBot.log', log.formatter)
         except KeyError:
             print "No log file specified in config. Defaulting to 'pyGBot.log'."
-            log.addLogFileHandler(log.logger,'pyGBot.log', log.formatter)
+            log.addLogFileHandler(log.logger, 'pyGBot.log', log.formatter)
 
         # set logging level
         try:
@@ -547,19 +558,19 @@ class GBotFactory(protocol.ClientFactory):
                 log.logger.setLevel(logging.WARNING)
             # otherwise use the default level of INFO
         except KeyError:
-            pass # no 'loglevel' key? use default level of INFO
+            pass  # no 'loglevel' key? use default level of INFO
 
         # open chat log
         try:
             print "Opening chat log file..."
-            log.addLogFileHandler(log.chatlog,conf['IRC']['chatlogfile'], log.cformat)
+            log.addLogFileHandler(log.chatlog, conf['IRC']['chatlogfile'], log.cformat)
         except IOError, msg:
             print "Unable to open log file: ", msg
             print "Defaulting to 'chat.log'."
-            log.addLogFileHandler(log.chatlog,'chat.log', log.cformat)
+            log.addLogFileHandler(log.chatlog, 'chat.log', log.cformat)
         except KeyError:
             print "No log file config found. Defaulting to 'chat.log'."
-            log.addLogFileHandler(log.chatlog,'chat.log', log.cformat)
+            log.addLogFileHandler(log.chatlog, 'chat.log', log.cformat)
 
     def clientConnectionLost(self, connector, reason):
         """ Called when a client's connection is shut down. Attempts to
@@ -575,6 +586,7 @@ class GBotFactory(protocol.ClientFactory):
         time.sleep(5)
         connector.connect()
 
+
 def run():
     """ Run GBot. Called from the pyGBot bootstrap script. """
     try:
@@ -583,7 +595,7 @@ def run():
         print "Cannot open config file: ", msg
         sys.exit(1)
 
-    if conf.has_key('IRC') == False:
+    if 'IRC' not in conf:
         print "Config file does not contain IRC connection information."
         sys.exit(1)
 
@@ -598,9 +610,9 @@ def run():
     localport = None
     localaddr = None
 
-    if conf['IRC'].has_key('localport'):
+    if 'localport' in conf['IRC']:
         localport = int(conf['IRC']['localport'])
-    if conf['IRC'].has_key('localaddr'):
+    if 'localaddr' in conf['IRC']:
         localaddr = conf['IRC']['localaddr']
 
     print "Initialising Factory..."
@@ -609,7 +621,7 @@ def run():
 
     # SSL support
     sslconnect = None
-    if conf['IRC'].has_key('ssl'):
+    if 'ssl' in conf['IRC']:
         if conf['IRC']['ssl'].lower() == "true":
             from twisted.internet import ssl
             # create SSL factory
@@ -636,13 +648,15 @@ def run():
         print "Unexpected error:", sys.exc_info()[0]
         raise
 
+
 # Backwards compatibility
 def stripcolors(msg):
     """ DEPRECATED. Maintained for backwards compatibility. Use
     pyGBot.format.stripcolors() or pyGBot.format.strip(). """
-    log.logger.warning("DEPRECATED: pyGBot.core.stripcolors() is deprecated. "+\
+    log.logger.warning("DEPRECATED: pyGBot.core.stripcolors() is deprecated. " +\
     "Use format.strip() to strip IRC formatting from a string.")
     return format.stripcolors(msg)
+
 
 def encodeOut(msg):
     """ DEPRECATED. Maintained for backwards compatibility. Use
@@ -650,6 +664,7 @@ def encodeOut(msg):
     log.logger.warning("DEPRECATED: pyGBot.core.encodeOut() is deprecated. " +\
     "Use format.encodeOut().")
     return format.encodeOut(msg)
+
 
 def decodeIn(msg):
     """ DEPRECATED. Maintained for backwards compatibility. Use
